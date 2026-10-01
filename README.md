@@ -3,7 +3,9 @@
 `jiwon100022/cap`의 웹 프로토타입을 `pp`에서 정적 사이트로 실행하기 위한 프로젝트입니다.
 원본 기준 커밋: `6ec02ca6e5c511369222b8fb8cf09cfeee95bd59`.
 
-배포 주소: **https://jiwon100022.github.io/pp/** (GitHub Pages 활성화 및 배포 성공 후 이용 가능)
+배포 주소: **https://jiwon100022.github.io/pp/**
+
+`main` 브랜치에는 편집 가능한 소스, `gh-pages` 브랜치에는 검증된 정적 배포 파일이 있습니다.
 
 ## 실행되는 기능
 
@@ -36,9 +38,11 @@ npm run preview
 
 ## GitHub Pages
 
-1. 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정합니다.
-2. **Actions → Build and deploy static site → Run workflow**를 실행합니다.
-3. 이후 `main`에 변경을 푸시하면 빌드 후 자동으로 배포됩니다. PR에서는 빌드만 확인합니다.
+이 사이트는 **Deploy from a branch → gh-pages → /(root)** 방식으로 게시됩니다. `gh-pages`의 정적 파일을 갱신하면 GitHub Pages가 배포합니다.
+
+수정 후에는 `main`에서 `npm ci`와 `npm run build`로 다시 빌드한 다음, `dist/`의 내용 전체(`.nojekyll` 포함)를 `gh-pages` 브랜치 루트에 반영하고 푸시합니다. `main`의 소스만 바꾸면 공개 사이트에는 아직 반영되지 않습니다.
+
+GitHub Pages 기본 배포를 사용하며 별도의 사용자 정의 Actions 빌드 워크플로는 사용하지 않습니다.
 
 별도의 API 키나 저장소 비밀값은 필요하지 않습니다.
 
@@ -52,10 +56,7 @@ npm run preview
 src/                   원본 React / TypeScript UI 및 시연 데이터
 public/.nojekyll       정적 호스팅용 표시 파일
 vite.config.ts         상대 자산 경로 설정
-.github/workflows/     빌드 검증 및 GitHub Pages 배포
 dist/                  생성된 배포 파일 (Git 추적 제외)
 ```
 
 원본 저장소의 문서, 백업 ZIP, 시연 영상은 웹 실행에 필요하지 않아 포함하지 않았습니다.
-
-
