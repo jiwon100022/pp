@@ -1,5 +1,6 @@
 import type { LanguageCode, TranslationMap } from '../types'
 import { mockTranslationService } from './mockTranslationService'
+import { offlineTranslations } from '../../shared/engine.mjs'
 
 export interface TranslationService {
   /**
@@ -10,7 +11,11 @@ export interface TranslationService {
 }
 
 /** 실제 번역 API로 교체할 때 이 할당만 바꾼다. */
-export const translationService: TranslationService = mockTranslationService
+export const translationService: TranslationService = {
+  async translate(text, from, targets) {
+    return { ...await mockTranslationService.translate(text, from, targets), ...offlineTranslations(text, from, targets) }
+  },
+}
 
 /** 발신 언어와 다른, 수신자들의 언어 목록 (중복 제거). */
 export function getTargetLanguages(memberLanguages: LanguageCode[], from: LanguageCode) {

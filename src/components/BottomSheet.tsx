@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { IconClose } from './Icons'
+import { useLocale } from '../i18n'
 
 type Props = {
   title: ReactNode
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export default function BottomSheet({ title, onClose, children, footer }: Props) {
+  const { t } = useLocale()
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -23,12 +25,13 @@ export default function BottomSheet({ title, onClose, children, footer }: Props)
         className="sheet"
         role="dialog"
         aria-modal="true"
+        aria-label={typeof title === 'string' ? title : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sheet__handle" aria-hidden="true" />
         <header className="sheet__header">
           <h3>{title}</h3>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('close')}>
             <IconClose size={18} />
           </button>
         </header>

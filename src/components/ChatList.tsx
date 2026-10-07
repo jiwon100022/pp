@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { getPartner, getRoomTitle, isGroupRoom } from '../data/mockData'
+import { getPartner, getRoomTitle, isGroupRoom, users } from '../data/mockData'
+import { useLocale } from '../i18n'
 import type { Message, Room } from '../types'
 import { formatTime } from '../utils/time'
 import { RoomAvatar } from './Avatar'
@@ -12,6 +13,10 @@ type Props = {
   activeRoomId: string
   currentUserId: string
   onSelect: (roomId: string) => void
+  onNew: () => void
+  onProfile: () => void
+  onLogout: () => void
+  status: string
 }
 
 export default function ChatList({
@@ -21,7 +26,9 @@ export default function ChatList({
   activeRoomId,
   currentUserId,
   onSelect,
+  onNew, onProfile, onLogout, status,
 }: Props) {
+  const { t, lang } = useLocale()
   const [query, setQuery] = useState('')
   const keyword = query.trim().toLowerCase()
   const visibleRooms = rooms.filter((room) =>
@@ -31,8 +38,8 @@ export default function ChatList({
   return (
     <aside className="sidebar">
       <header className="sidebar__header">
-        <h1 className="sidebar__title">채팅</h1>
-        <button type="button" className="icon-btn" aria-label="새 채팅">
+        <h1 className="sidebar__title">{t('chats')}</h1>
+        <button type="button" className="icon-btn" aria-label={t('newChat')} onClick={onNew}>
           <IconCompose />
         </button>
       </header>
@@ -41,7 +48,7 @@ export default function ChatList({
         <IconSearch size={16} />
         <input
           type="search"
-          placeholder="채팅방 검색"
+          placeholder={t('searchRooms')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -70,10 +77,10 @@ export default function ChatList({
                       {flag && <span className="room-item__flag">{flag}</span>}
                     </span>
                     {isGroup && <span className="room-item__count">{room.memberIds.length}</span>}
-                    <time className="room-item__time">{last && formatTime(last.createdAt)}</time>
+                    <time className="room-item__time">{last && formatTime(last.createdAt, lang)}</time>
                   </div>
                   <div className="room-item__row">
-                    <span className="room-item__preview">{last?.originalText}</span>
+                    <span className="room-item__preview">{last?.translations[lang]?.cultural || last?.translations[lang]?.standard || last?.originalText || t('empty')}</span>
                     {count > 0 && <span className="badge">{count}</span>}
                   </div>
                 </div>
@@ -82,6 +89,8 @@ export default function ChatList({
           )
         })}
       </ul>
+      {!visibleRooms.length && <p className="list-empty">{t('noResults')}</p>}
+      <footer className="sidebar-profile"><button onClick={onProfile} className="profile-link">{users[currentUserId].flag} {users[currentUserId].name}<small>{t('profile')} ↗</small></button><p className="connection-status" role="status">{status}</p><button className="logout-button" onClick={onLogout}>{t('logout')}</button></footer>
     </aside>
   )
 }

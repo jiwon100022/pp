@@ -6,6 +6,7 @@ export type User = {
   flag: string
   lang: LanguageCode
   color: string
+  country?: string
 }
 
 export type Room = {
@@ -14,6 +15,8 @@ export type Room = {
   name?: string
   memberIds: string[]
   unread: number
+  language?: LanguageCode
+  kind?: 'global' | 'language' | 'private'
 }
 
 /** 언어별 번역 결과. cultural은 이후 문화 맥락 번역용으로 예약. */
@@ -40,6 +43,7 @@ export type InterventionLevel = 'silent' | 'inform' | 'warn'
 
 /** 메시지 안의 문화 표현 분석 결과 */
 export type CulturalAnalysis = {
+  localized?: Partial<Record<LanguageCode, Omit<CulturalAnalysis, 'localized'>>>
   expression: string
   category: string
   /** 시트에 표시할 짧은 분류명 */
@@ -77,5 +81,6 @@ export type Message = {
   translationStatus: 'pending' | 'done'
   culturalAnalysis: CulturalAnalysis | null
   createdAt: string
+  processingError?: string
 }
 
