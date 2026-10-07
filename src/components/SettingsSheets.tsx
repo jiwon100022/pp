@@ -1,5 +1,6 @@
 import type { CultureHelpMode, TranslationMode } from '../types'
 import BottomSheet from './BottomSheet'
+import { useLocale } from '../i18n'
 
 type Option<T extends string> = { value: T; label: string; description: string }
 
@@ -52,10 +53,10 @@ export function TranslationSettingsSheet({
   onChange: (value: TranslationMode) => void
   onClose: () => void
 }) {
+  const { t } = useLocale()
   return (
-    <BottomSheet title="번역 설정" onClose={onClose}>
-      <p className="sheet-desc">받은 메시지의 번역 표시 방식을 선택할 수 있어요.</p>
-      <RadioList name="translation-mode" options={TRANSLATION_OPTIONS} value={value} onChange={onChange} />
+    <BottomSheet title={t('translation')} onClose={onClose}>
+      <RadioList name="translation-mode" options={TRANSLATION_OPTIONS.map(option => ({ ...option, label: t(option.value === 'always' ? 'all' : option.value), description: '' }))} value={value} onChange={onChange} />
     </BottomSheet>
   )
 }
@@ -84,12 +85,10 @@ export function CultureSettingsSheet({
   onChange: (value: CultureHelpMode) => void
   onClose: () => void
 }) {
+  const { t } = useLocale()
   return (
-    <BottomSheet title="문화 표현 도움" onClose={onClose}>
-      <p className="sheet-desc">
-        문화적 의미나 말투가 다르게 전달될 수 있는 표현을 어느 정도까지 안내할지 선택할 수 있어요.
-      </p>
-      <RadioList name="culture-mode" options={CULTURE_OPTIONS} value={value} onChange={onChange} />
+    <BottomSheet title={t('culture')} onClose={onClose}>
+      <RadioList name="culture-mode" options={CULTURE_OPTIONS.map(option => ({ ...option, label: t(option.value === 'all' ? 'everyCulture' : option.value), description: '' }))} value={value} onChange={onChange} />
     </BottomSheet>
   )
 }

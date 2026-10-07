@@ -1,5 +1,6 @@
 import type { CulturalAnalysis, CultureHelpMode, LanguageCode } from '../types'
 import { mockCultureService } from './mockCultureService'
+import { analyzeOffline } from '../../shared/engine.mjs'
 
 export type CultureResult =
   | { cultureDetected: false }
@@ -11,7 +12,13 @@ export interface CultureService {
 }
 
 /** 실제 AI 서비스로 교체할 때 이 할당만 바꾼다. */
-export const cultureService: CultureService = mockCultureService
+export const cultureService: CultureService = {
+  async analyze(text, lang) {
+    const analysis = analyzeOffline(text, lang)
+    if (analysis) return { cultureDetected: true, analysis }
+    return mockCultureService.analyze(text, lang)
+  },
+}
 
 /** 작성 중 입력창 위에 문화 표현 안내를 띄울지 */
 export function shouldShowComposerHint(analysis: CulturalAnalysis, mode: CultureHelpMode) {
@@ -23,7 +30,7 @@ export function shouldShowComposerHint(analysis: CulturalAnalysis, mode: Culture
       // 발신 중 안내는 거의 표시하지 않는다 (실제 오해 위험이 높은 warn만)
       return level === 'warn'
     case 'all':
-      return level === 'inform' || level === 'warn'
+      return level !== 'silent'
     case 'important':
       // TODO: 실제 서비스에서는 confidence / risk threshold 적용 예정
       // (warn은 항상, inform은 threshold 이상일 때만). 현재는 시연을 위해 demo inform 사례도 표시한다.
@@ -32,7 +39,9 @@ export function shouldShowComposerHint(analysis: CulturalAnalysis, mode: Culture
 }
 
 /** 받은 메시지에서 문화 맥락 탭 / 표현 설명을 보여줄지 */
-export function shouldShowReceiverCulture(mode: CultureHelpMode) {
-  return mode !== 'off'
+export function shouldShowReceiverCulture(mode: CultureHelpMode, analysis?: CulturalAnalysis | null) {
+  if (mode === 'off') return false
+  if (mode === 'all') return true
+  return mode === 'minimal' ? analysis?.interventionLevel === 'warn' : analysis?.interventionLevel !== 'silent'
 }
 

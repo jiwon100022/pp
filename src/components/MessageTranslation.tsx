@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LANGUAGES } from '../data/languages'
 import type { LanguageCode, Message } from '../types'
+import { useLocale } from '../i18n'
 
 type TranslationCardProps = {
   message: Message
@@ -20,6 +21,7 @@ export function TranslationCard({
   tapToReveal,
   onExplain,
 }: TranslationCardProps) {
+  const { t } = useLocale()
   const [tab, setTab] = useState<'standard' | 'cultural'>('cultural')
   const [revealed, setRevealed] = useState(!tapToReveal)
   const translation = message.translations[lang]
@@ -27,7 +29,7 @@ export function TranslationCard({
   if (!revealed) {
     return (
       <button type="button" className="tr-reveal" onClick={() => setRevealed(true)}>
-        🌐 번역 보기
+        🌐 {t('reveal')}
       </button>
     )
   }
@@ -44,7 +46,7 @@ export function TranslationCard({
               className={`tr-tab${tab === 'standard' ? ' is-active' : ''}`}
               onClick={() => setTab('standard')}
             >
-              기본 번역
+              {t('standard')}
             </button>
             <button
               type="button"
@@ -53,7 +55,7 @@ export function TranslationCard({
               className={`tr-tab${tab === 'cultural' ? ' is-active' : ''}`}
               onClick={() => setTab('cultural')}
             >
-              ✨ 문화 맥락
+              ✨ {t('cultural')}
             </button>
           </div>
           <div className="tr-card__text" lang={lang}>
@@ -61,7 +63,7 @@ export function TranslationCard({
           </div>
         </div>
         <button type="button" className="culture-link" onClick={onExplain}>
-          ✨ 표현 설명
+          ✨ {t('explain')}
         </button>
       </>
     )
@@ -76,10 +78,10 @@ export function TranslationCard({
   }
 
   if (message.translationStatus === 'pending') {
-    return <div className="tr-card tr-card--muted">번역 중…</div>
+    return <div className="tr-card tr-card--muted">{t('translating')}</div>
   }
 
-  return <div className="tr-card tr-card--muted">번역을 지원하지 않는 문장이에요 · 원문만 표시</div>
+  return <div className="tr-card tr-card--muted">{t(message.processingError === 'offline' ? 'offlineTranslation' : 'unavailable')}</div>
 }
 
 type DeliveryNoteProps = {
@@ -90,27 +92,27 @@ type DeliveryNoteProps = {
 
 /** 내가 보낸 메시지 아래의 전달 상태 표시 */
 export function DeliveryNote({ message, targets, onOpen }: DeliveryNoteProps) {
+  const { t } = useLocale()
   if (message.translationStatus === 'pending') {
-    return <div className="delivery-note">🌐 번역 중…</div>
+    return <div className="delivery-note">🌐 {t('translating')}</div>
   }
 
   const translated = targets.filter((lang) => message.translations[lang])
   let label: string
   if (translated.length === 0) {
-    label = '번역 미지원 · 원문으로 전달됨'
+    label = t(message.processingError === 'offline' ? 'offlineTranslation' : 'unavailable')
   } else {
     label =
       translated.length === 1
-        ? `${LANGUAGES[translated[0]].ko}로 전달됨`
-        : `${translated.length}개 언어로 전달됨`
-    if (translated.length < targets.length) label += ' (일부 원문)'
+        ? `${LANGUAGES[translated[0]].native} ✓`
+        : `${translated.length} ${t('languages')} ✓`
   }
 
   return (
     <div className="delivery-note">
       🌐 {label} ·{' '}
       <button type="button" className="delivery-note__open" onClick={onOpen}>
-        보기
+        {t('view')}
       </button>
     </div>
   )

@@ -27,7 +27,7 @@ export const rooms: Room[] = [
 ]
 
 export function isGroupRoom(room: Room) {
-  return room.memberIds.length > 2
+  return Boolean(room.name) || room.memberIds.length > 2
 }
 
 export function getPartner(room: Room, currentUserId: string) {

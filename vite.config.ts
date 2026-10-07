@@ -5,4 +5,5 @@ export default defineConfig({
   plugins: [react()],
   // Relative assets work at /pp/ and on any ordinary static file host.
   base: './',
+  server: { proxy: { '/api': { target: 'http://127.0.0.1:8787', changeOrigin: false } } },
 })

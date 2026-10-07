@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { CulturalAnalysis } from '../types'
 import BottomSheet from './BottomSheet'
+import { useLocale } from '../i18n'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -23,21 +24,22 @@ type SenderProps = {
  * inform은 설명만 제공하고 문장은 그대로 둔다. 대체 표현은 warn에서만 제공한다.
  */
 export function SenderCultureSheet({ analysis, onApply, onClose }: SenderProps) {
+  const { t } = useLocale()
   const isWarn = analysis.interventionLevel === 'warn'
   const alternative = isWarn ? analysis.senderAlternativeText : undefined
 
   return (
     <BottomSheet
-      title={isWarn ? '⚠ 표현 확인' : `✨ ${analysis.hintLabel}`}
+      title={isWarn ? `⚠ ${t('expression')}` : `✨ ${analysis.hintLabel}`}
       onClose={onClose}
       footer={
         alternative && onApply ? (
           <>
             <button type="button" className="sheet-btn sheet-btn--primary" onClick={onApply}>
-              더 부드러운 표현 사용
+              {t('alternative')}
             </button>
             <button type="button" className="sheet-btn" onClick={onClose}>
-              닫기
+              {t('close')}
             </button>
           </>
         ) : (
@@ -51,14 +53,14 @@ export function SenderCultureSheet({ analysis, onApply, onClose }: SenderProps) 
       </div>
       <p className="culture-lead">{analysis.senderGuide.description}</p>
 
-      {analysis.region && <Row label="지역">{analysis.region}</Row>}
-      <Row label="의미">{analysis.meaning}</Row>
-      <Row label="현재 문맥">{analysis.contextMeaning}</Row>
-      <Row label="말투 · 분위기">{analysis.tone}</Row>
+      {analysis.region && <Row label={t('region')}>{analysis.region}</Row>}
+      <Row label={t('meaning')}>{analysis.meaning}</Row>
+      <Row label={t('context')}>{analysis.contextMeaning}</Row>
+      <Row label={t('tone')}>{analysis.tone}</Row>
 
       {alternative && (
         <div className="culture-suggest">
-          <div className="culture-suggest__label">다른 표현</div>
+          <div className="culture-suggest__label">{t('alternative')}</div>
           <p>{alternative}</p>
         </div>
       )}
@@ -74,19 +76,20 @@ type ReceiverProps = {
 
 /** 수신자용: 받은 메시지의 표현 설명 (발신자 기능 없음) */
 export function ReceiverCultureSheet({ originalText, analysis, onClose }: ReceiverProps) {
+  const { t } = useLocale()
   return (
-    <BottomSheet title="✨ 이 메시지의 문화 표현" onClose={onClose}>
-      <Row label="원문">
-        <span className="culture-original" lang="ko">
+    <BottomSheet title={`✨ ${t('explain')}`} onClose={onClose}>
+      <Row label={t('original')}>
+        <span className="culture-original">
           {originalText}
         </span>
       </Row>
-      <Row label="표현">
+      <Row label={t('expression')}>
         <span className="culture-head__expr culture-head__expr--sm">“{analysis.expression}”</span>
       </Row>
-      <Row label="설명">{analysis.receiverGuide.description}</Row>
-      <Row label="현재 문맥">{analysis.receiverGuide.context}</Row>
-      <Row label="말투">{analysis.receiverGuide.tone}</Row>
+      <Row label={t('description')}>{analysis.receiverGuide.description}</Row>
+      <Row label={t('context')}>{analysis.receiverGuide.context}</Row>
+      <Row label={t('tone')}>{analysis.receiverGuide.tone}</Row>
     </BottomSheet>
   )
 }

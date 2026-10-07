@@ -15,13 +15,15 @@ import type {
   User,
 } from '../types'
 import { formatTime } from '../utils/time'
+import { useLocale } from '../i18n'
+import BottomSheet from './BottomSheet'
 import { Avatar } from './Avatar'
 import { ReceiverCultureSheet, SenderCultureSheet } from './CultureSheets'
 import DeliveryPanel from './DeliveryPanel'
 import { DeliveryNote, TranslationCard } from './MessageTranslation'
 import { CultureSettingsSheet, TranslationSettingsSheet } from './SettingsSheets'
 import SummarySheet from './SummarySheet'
-import { IconBack, IconMore, IconPlus, IconSearch, IconSend } from './Icons'
+import { IconBack, IconMore, IconSearch, IconSend } from './Icons'
 
 type Props = {
   room: Room
@@ -31,30 +33,11 @@ type Props = {
   cultureMode: CultureHelpMode
   onTranslationModeChange: (mode: TranslationMode) => void
   onCultureModeChange: (mode: CultureHelpMode) => void
-  onSend: (text: string) => void
+  onSend: (text: string) => Promise<void>
   onBack: () => void
 }
 
-const todayLabel = new Intl.DateTimeFormat('ko-KR', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  weekday: 'long',
-}).format(new Date())
-
-const MENU_GROUPS = [
-  ['멤버', '사진 / 파일', '링크'],
-  ['대화 요약', '번역 설정', '문화 표현 설정'],
-  ['알림', '채팅방 설정'],
-]
-
-type MenuSheet = 'summary' | 'translation' | 'culture'
-
-const MENU_SHEETS: Record<string, MenuSheet | undefined> = {
-  '대화 요약': 'summary',
-  '번역 설정': 'translation',
-  '문화 표현 설정': 'culture',
-}
+type MenuSheet = 'summary' | 'translation' | 'culture' | 'members'
 
 export default function ChatRoom({
   room,
@@ -67,7 +50,15 @@ export default function ChatRoom({
   onSend,
   onBack,
 }: Props) {
+  const { t, lang } = useLocale()
   const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false), [sendError, setSendError] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false), [query, setQuery] = useState('')
+  const visibleMessages = messages.filter(m => !query.trim() || [m.originalText, m.translations[lang]?.standard, m.translations[lang]?.cultural].some(text => text?.toLowerCase().includes(query.trim().toLowerCase())))
+  const exportChat = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ room: getRoomTitle(room, currentUser.id), messages }, null, 2)], { type: 'application/json' }))
+    const link = document.createElement('a'); link.href = url; link.download = `synapse-${room.id}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -173,13 +164,16 @@ export default function ChatRoom({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }, [draft])
 
-  const submit = () => {
+  const submit = async () => {
     const text = draft.trim()
-    if (!text) return
-    onSend(text)
-    setDraft('')
-    setDraftCulture(null)
-    inputRef.current?.focus()
+    if (!text || sending) return
+    setSending(true); setSendError(false)
+    try {
+      await onSend(text)
+      setDraft(previous => previous.trim() === text ? '' : previous)
+      setDraftCulture(null)
+    } catch { setSendError(true) }
+    finally { setSending(false); inputRef.current?.focus() }
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -192,7 +186,7 @@ export default function ChatRoom({
   return (
     <section className="room">
       <header className="room__header">
-        <button type="button" className="icon-btn room__back" onClick={onBack} aria-label="채팅 목록">
+        <button type="button" className="icon-btn room__back" onClick={onBack} aria-label={t('back')}>
           <IconBack size={20} />
         </button>
         <div className="room__heading">
@@ -201,17 +195,17 @@ export default function ChatRoom({
             {!isGroup && <span className="room__flag">{partner.flag}</span>}
           </div>
           <p className="room__meta">
-            {members.length}명 · {languageCount}개 언어
+            {members.length} {t('onlinePeople')} · {languageCount} {t('languages')}
           </p>
         </div>
         <div className="room__actions" ref={menuRef}>
-          <button type="button" className="icon-btn" aria-label="대화 검색">
+          <button type="button" className="icon-btn" aria-label={t('searchMessages')} onClick={() => { setSearchOpen(previous => !previous); setQuery('') }}>
             <IconSearch size={19} />
           </button>
           <button
             type="button"
             className={`icon-btn${menuOpen ? ' is-active' : ''}`}
-            aria-label="메뉴"
+            aria-label={t('menu')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
           >
@@ -219,8 +213,8 @@ export default function ChatRoom({
           </button>
 
           {menuOpen && (
-            <nav className="room-menu" aria-label="채팅방 메뉴">
-              {MENU_GROUPS.map((group, gi) => (
+            <nav className="room-menu" aria-label={t('menu')}>
+              {([['members'], ['summary', 'translation', 'culture'], ['export']] as const).map((group, gi) => (
                 <ul key={gi} className="room-menu__group">
                   {group.map((label) => (
                     <li key={label}>
@@ -229,12 +223,12 @@ export default function ChatRoom({
                         className="room-menu__item"
                         onClick={() => {
                           setMenuOpen(false)
-                          const sheet = MENU_SHEETS[label]
-                          if (sheet) setOpenSheet(sheet)
+                          if (label === 'export') exportChat()
+                          else setOpenSheet(label)
                         }}
                       >
-                        <span>{label === '대화 요약' ? `✨ ${label}` : label}</span>
-                        {label === '멤버' && (
+                        <span>{label === 'summary' ? `✨ ${t(label)}` : t(label)}</span>
+                        {label === 'members' && (
                           <span className="room-menu__hint">{members.length}</span>
                         )}
                       </button>
@@ -247,26 +241,27 @@ export default function ChatRoom({
         </div>
       </header>
 
-      <div className="room__messages" ref={listRef}>
-        <div className="date-divider">
-          <span>{todayLabel}</span>
-        </div>
+      {searchOpen && <label className="message-search"><input autoFocus type="search" placeholder={t('searchMessages')} value={query} onChange={e => setQuery(e.target.value)} /><small>{visibleMessages.length} / {messages.length}</small></label>}
 
-        {messages.map((m, i) => {
-          const prev = messages[i - 1]
-          const next = messages[i + 1]
+      <div className="room__messages" ref={listRef}>
+        {!visibleMessages.length && <p className="empty-room">{t(query ? 'noResults' : 'empty')}</p>}
+
+        {visibleMessages.map((m, i) => {
+          const prev = visibleMessages[i - 1]
+          const next = visibleMessages[i + 1]
           const sender = users[m.senderId]
           const isMine = m.senderId === currentUser.id
-          const time = formatTime(m.createdAt)
+          const time = formatTime(m.createdAt, lang)
           const startsGroup = !prev || prev.senderId !== m.senderId
           const showTime =
-            !next || next.senderId !== m.senderId || formatTime(next.createdAt) !== time
-          const needsTranslation = !isMine && m.originalLanguage !== currentUser.lang
+            !next || next.senderId !== m.senderId || formatTime(next.createdAt, lang) !== time
+          const needsTranslation = !isMine && (m.originalLanguage !== currentUser.lang || translationMode === 'always')
           const targets = isMine ? getTargetLanguages(roomLanguages, m.originalLanguage) : []
 
           return (
+            <div className="message-entry" key={m.id}>
+            {(!prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()) && <div className="date-divider"><span>{new Intl.DateTimeFormat(lang, { dateStyle: 'full' }).format(new Date(m.createdAt))}</span></div>}
             <div
-              key={m.id}
               className={`msg ${isMine ? 'msg--mine' : 'msg--theirs'}${startsGroup ? ' msg--first' : ''}`}
             >
               {!isMine && (
@@ -288,9 +283,9 @@ export default function ChatRoom({
                 {needsTranslation && translationMode !== 'off' && (
                   <TranslationCard
                     key={translationMode}
-                    message={m}
+                    message={m.originalLanguage === currentUser.lang ? { ...m, translations: { ...m.translations, [currentUser.lang]: { standard: m.originalText } } } : m}
                     lang={currentUser.lang}
-                    showCulture={shouldShowReceiverCulture(cultureMode)}
+                    showCulture={shouldShowReceiverCulture(cultureMode, m.culturalAnalysis)}
                     tapToReveal={translationMode === 'tap'}
                     onExplain={() => setExplainMessageId(m.id)}
                   />
@@ -303,7 +298,7 @@ export default function ChatRoom({
                   />
                 )}
               </div>
-            </div>
+            </div></div>
           )
         })}
       </div>
@@ -320,7 +315,7 @@ export default function ChatRoom({
       {explainMessage?.culturalAnalysis && (
         <ReceiverCultureSheet
           originalText={explainMessage.originalText}
-          analysis={explainMessage.culturalAnalysis}
+          analysis={explainMessage.culturalAnalysis.localized?.[lang] || explainMessage.culturalAnalysis}
           onClose={closeExplain}
         />
       )}
@@ -337,6 +332,7 @@ export default function ChatRoom({
       {openSheet === 'summary' && (
         <SummarySheet roomId={room.id} messages={messages} onClose={closeSheet} />
       )}
+      {openSheet === 'members' && <BottomSheet title={t('members')} onClose={closeSheet}><ul className="member-list">{members.map(member => <li key={member.id}><Avatar user={member} /> {member.flag} {member.name} <small>{member.lang}</small></li>)}</ul></BottomSheet>}
       {openSheet === 'translation' && (
         <TranslationSettingsSheet
           value={translationMode}
@@ -356,7 +352,7 @@ export default function ChatRoom({
               className="culture-hint culture-hint--warn"
               onClick={() => setSenderSheetAnalysis(composerHint)}
             >
-              ⚠ 상대에게 의도보다 강하게 들릴 수 있어요
+              ⚠ {t('risk')}
             </button>
           ) : (
             <button
@@ -370,6 +366,7 @@ export default function ChatRoom({
         </div>
       )}
 
+      {sendError && <p className="send-error" role="alert">{t('sendError')}</p>}
       <form
         className="composer"
         onSubmit={(e) => {
@@ -377,20 +374,19 @@ export default function ChatRoom({
           submit()
         }}
       >
-        <button type="button" className="icon-btn composer__attach" aria-label="첨부">
-          <IconPlus size={20} />
-        </button>
         <div className="composer__field">
           <textarea
             ref={inputRef}
             rows={1}
             value={draft}
-            placeholder="메시지 입력"
+            placeholder={t('message')}
+            aria-label={t('message')}
+            maxLength={4000}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
           />
         </div>
-        <button type="submit" className="composer__send" disabled={!draft.trim()} aria-label="전송">
+        <button type="submit" className="composer__send" disabled={!draft.trim() || sending} aria-label={t('send')}>
           <IconSend size={16} />
         </button>
       </form>
